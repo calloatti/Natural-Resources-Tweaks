@@ -9,6 +9,7 @@ using Timberborn.ForestryUI;
 using Timberborn.Rendering;
 using Timberborn.SelectionSystem;
 using Timberborn.TerrainQueryingSystem;
+using Timberborn.TerrainSystem;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -16,44 +17,90 @@ namespace Calloatti.NaturalResourcesTweaks
 {
   public static class TreeCuttingAreaHelper
   {
-    // Evaluates modifiers, generates columns, and returns all valid Z-levels for those columns
+    // Evaluates modifiers, and snaps X,Y coordinates to the Z-level in direct vertical line of sight
     public static IEnumerable<Vector3Int> ProcessBlocks(IEnumerable<Vector3Int> inputBlocks, TerrainAreaService terrainAreaService, IBlockService blockService)
     {
+      // Extract the private ITerrainService so we can check for underground blocks
+      ITerrainService terrainService = (ITerrainService)AccessTools.Field(typeof(TerrainAreaService), "_terrainService").GetValue(terrainAreaService);
+
       bool shift = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
       bool ctrl = Keyboard.current != null && Keyboard.current.ctrlKey.isPressed;
       bool alt = Keyboard.current != null && Keyboard.current.altKey.isPressed;
 
-      // If BOTH Shift and Ctrl are held, select every tile on the map
-      if (shift && ctrl)
+      // The game feeds us blocks perfectly flat at the exact Z-level of the initial click
+      Vector3Int firstBlock = inputBlocks.FirstOrDefault();
+      int initialZ = firstBlock != default ? firstBlock.z : 0;
+
+      // If Alt is held, select every tile on the map
+      if (alt)
       {
         Vector3Int mapSize = blockService.Size;
-        List<Vector2Int> allMapCoords = new List<Vector2Int>(mapSize.x * mapSize.y);
+        List<Vector3Int> allMapCoords = new List<Vector3Int>(mapSize.x * mapSize.y);
         for (int x = 0; x < mapSize.x; x++)
         {
           for (int y = 0; y < mapSize.y; y++)
           {
-            allMapCoords.Add(new Vector2Int(x, y));
+            allMapCoords.Add(SnapToSurface(new Vector3Int(x, y, initialZ), terrainService, blockService));
           }
         }
-        return terrainAreaService.InMapCoordinates(allMapCoords);
+        return allMapCoords;
       }
 
       // Otherwise, apply modifier filters if any are pressed
       IEnumerable<Vector3Int> filteredBlocks = inputBlocks;
-      if (shift || ctrl || alt)
+      if (shift || ctrl)
       {
         filteredBlocks = inputBlocks.Where(coords =>
         {
-          if (shift) return Math.Abs(coords.x) % 2 == 0;          // Vertical lines
-          if (ctrl) return Math.Abs(coords.y) % 2 == 0;           // Horizontal lines
-          if (alt) return Math.Abs(coords.x + coords.y) % 2 == 0; // Checkered pattern
+          if (shift && ctrl) return Math.Abs(coords.x + coords.y) % 2 == 0; // Checkered pattern
+          if (shift) return Math.Abs(coords.x) % 2 == 0;                   // Vertical lines
+          if (ctrl) return Math.Abs(coords.y) % 2 == 0;                    // Horizontal lines
           return true;
         });
       }
 
-      // Extract unique X,Y columns and return all valid Z-levels for them
-      IEnumerable<Vector2Int> coords2D = filteredBlocks.Select(b => new Vector2Int(b.x, b.y)).Distinct();
-      return terrainAreaService.InMapCoordinates(coords2D);
+      // Snap each flat coordinate to the actual surface in vertical line of sight
+      return filteredBlocks.Select(b => SnapToSurface(b, terrainService, blockService));
+    }
+
+    private static Vector3Int SnapToSurface(Vector3Int startPos, ITerrainService terrainService, IBlockService blockService)
+    {
+      int x = startPos.x;
+      int y = startPos.y;
+      int initialZ = startPos.z;
+
+      if (terrainService.Underground(startPos))
+      {
+        // We dragged into a hill. Go UP until we find air.
+        for (int z = initialZ; z <= terrainService.Size.z; z++)
+        {
+          Vector3Int pos = new Vector3Int(x, y, z);
+          if (!terrainService.Underground(pos))
+          {
+            return pos; // The surface block (air resting on terrain)
+          }
+        }
+        return new Vector3Int(x, y, terrainService.Size.z);
+      }
+      else
+      {
+        // We dragged over a valley. Go DOWN until we hit terrain or an object.
+        for (int z = initialZ; z >= 0; z--)
+        {
+          Vector3Int pos = new Vector3Int(x, y, z);
+
+          if (terrainService.Underground(pos))
+          {
+            return new Vector3Int(x, y, z + 1); // Surface is the block right above the terrain
+          }
+
+          if (blockService.GetBottomObjectAt(pos) != null)
+          {
+            return pos; // Hit a platform, tree, or building
+          }
+        }
+        return new Vector3Int(x, y, 0); // Reached the bottom of the map
+      }
     }
   }
 

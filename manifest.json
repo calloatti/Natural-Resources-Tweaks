@@ -1,6 +1,6 @@
 {
   "Name": "Natural Resources Tweaks",
-  "Version": "2.0.0",
+  "Version": "2.2.0",
   "Id": "Calloatti.NaturalResourcesTweaks",
   "MinimumGameVersion": "1.0.12.5",
   "Description": "Replaces the oversized mature ghost models of trees, crops and bushes with the seedling variants during the planting preview.",

@@ -10,6 +10,7 @@ using Timberborn.Planting;
 using Timberborn.PlantingUI;
 using UnityEngine;
 using UnityEngine.InputSystem;
+
 namespace Calloatti.NaturalResourcesTweaks
 {
   [HarmonyPatch]
@@ -32,14 +33,14 @@ namespace Calloatti.NaturalResourcesTweaks
       bool alt = Keyboard.current != null && Keyboard.current.altKey.isPressed;
 
       // If no modifiers are pressed, let the game process the blocks normally
-      if (!shift && !ctrl && !alt) return;
+      if (!shift && !ctrl) return;
 
       // Replace the incoming blocks with our filtered pattern
       inputBlocks = inputBlocks.Where(coords =>
       {
-        if (shift) return Math.Abs(coords.x) % 2 == 0;          // Vertical lines (along X axis)
-        if (ctrl) return Math.Abs(coords.y) % 2 == 0;           // Horizontal lines (along Y axis)
-        if (alt) return Math.Abs(coords.x + coords.y) % 2 == 0; // Checkered pattern
+        if (shift && ctrl) return Math.Abs(coords.x + coords.y) % 2 == 0; // Checkered pattern
+        if (shift) return Math.Abs(coords.x) % 2 == 0;                   // Vertical lines (along X axis)
+        if (ctrl) return Math.Abs(coords.y) % 2 == 0;                    // Horizontal lines (along Y axis)
 
         return true;
       });
@@ -74,6 +75,10 @@ namespace Calloatti.NaturalResourcesTweaks
       // If the tile is obstructed, we hijack the PlantingBlocker logic
       if (!____spawnValidationService.IsUnobstructed(coordinates, resourceToPlant))
       {
+        // Check if it's the exact same crop/tree already planted there
+        PlantableSpec plantableSpec = ____blockService.GetBottomObjectComponentAt<PlantableSpec>(coordinates);
+        if (plantableSpec != null && plantableSpec.TemplateName == resourceToPlant) return;
+
         Demolishable demolishable = ____blockService.GetBottomObjectComponentAt<Demolishable>(coordinates);
         if (demolishable != null)
         {
@@ -92,8 +97,20 @@ namespace Calloatti.NaturalResourcesTweaks
   [HarmonyPatch(typeof(PlantingService), nameof(PlantingService.SetPlantingCoordinates))]
   public static class Patch_PlantingService_SetPlantingCoordinates
   {
-    public static void Postfix(Vector3Int coordinates, IBlockService ____blockService)
+    // Added 'string resource' to intercept the name of the plant being placed
+    public static void Postfix(Vector3Int coordinates, string resource, IBlockService ____blockService)
     {
+      // Read the cached boolean from our IModStarter
+      if (!NaturalResourcesTweaksStarter.MarkForDemolition) return;
+
+      // If Alt is held, do not mark for demolition
+      bool alt = Keyboard.current != null && Keyboard.current.altKey.isPressed;
+      if (alt) return;
+
+      // If it's the exact same crop/tree already planted there, do nothing
+      PlantableSpec plantableSpec = ____blockService.GetBottomObjectComponentAt<PlantableSpec>(coordinates);
+      if (plantableSpec != null && plantableSpec.TemplateName == resource) return;
+
       Demolishable demolishable = ____blockService.GetBottomObjectComponentAt<Demolishable>(coordinates);
       if (demolishable != null && !demolishable.IsMarked)
       {
