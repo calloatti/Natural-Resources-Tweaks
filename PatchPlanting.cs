@@ -2,21 +2,140 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Bindito.Core;
 using HarmonyLib;
 using Timberborn.BlockSystem;
+using Timberborn.CameraSystem;
 using Timberborn.Demolishing;
 using Timberborn.NaturalResources;
 using Timberborn.Planting;
 using Timberborn.PlantingUI;
+using Timberborn.SelectionToolSystem;
+using Timberborn.SingletonSystem;
+using Timberborn.ToolButtonSystem;
+using Timberborn.ToolSystem;
+using Timberborn.ToolSystemUI;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
 
 namespace Calloatti.NaturalResourcesTweaks
 {
+  public static class PlantingState
+  {
+    public static SelectionPattern Pattern = SelectionPattern.Solid;
+    public static CameraService CameraService;
+  }
+
+  [Context("Game")]
+  public class PatternToolConfigurator : Configurator
+  {
+    protected override void Configure()
+    {
+      Bind<PlantingPatternTool>().AsSingleton();
+      Bind<PlantingButtonAdder>().AsSingleton();
+    }
+  }
+
+  public class PlantingPatternTool : SharedToggleToolBase
+  {
+    public PlantingPatternTool(SelectionToolProcessorFactory f) : base(f) { }
+
+    public override void Cycle()
+    {
+      PlantingState.Pattern = (SelectionPattern)(((int)PlantingState.Pattern + 1) % 4);
+      UpdateIcons();
+    }
+
+    protected override void UpdateIcons()
+    {
+      if (Sprites == null) return;
+      var currentSprite = new StyleBackground(Sprites[(int)PlantingState.Pattern]);
+      foreach (var icon in Icons)
+      {
+        if (icon != null) icon.style.backgroundImage = currentSprite;
+      }
+    }
+
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Planting Pattern").AddSection("Click to cycle to the next pattern.").Build();
+  }
+
+  public class PlantingButtonAdder : IPostLoadableSingleton, IDisposable
+  {
+    private readonly ToolButtonFactory _f;
+    private readonly ToolGroupService _g;
+    private readonly ToolButtonService _s;
+    private readonly PlantingPatternTool _t;
+    private readonly ToolService _toolService;
+
+    private ITool _lastRealTool;
+
+    public PlantingButtonAdder(ToolButtonFactory f, ToolGroupService g, ToolButtonService s, PlantingPatternTool t, CameraService cam, ToolService toolService, EventBus eventBus)
+    {
+      _f = f; _g = g; _s = s; _t = t;
+      PlantingState.CameraService = cam;
+      _toolService = toolService;
+      eventBus.Register(this);
+    }
+
+    public void Dispose()
+    {
+      PlantingState.CameraService = null;
+      SharedSpriteGenerator.ClearCache();
+    }
+
+    [OnEvent]
+    public void OnToolEntered(ToolEnteredEvent e)
+    {
+      if (e.Tool != _t)
+      {
+        _lastRealTool = e.Tool;
+      }
+    }
+
+    public void PostLoad()
+    {
+      var sprites = Enum.GetValues(typeof(SelectionPattern)).Cast<SelectionPattern>().Select(SharedSpriteGenerator.GenPattern).ToArray();
+      _t.SetSprites(sprites);
+
+      string[] groups = { "Fields", "Forestry" };
+      foreach (string groupName in groups) AddButtonToGroup(groupName, sprites);
+    }
+
+    private void AddButtonToGroup(string groupName, Sprite[] sprites)
+    {
+      ToolGroupSpec group = _g.GetGroup(groupName);
+      ToolButton existing = _s.ToolButtons.FirstOrDefault(b => _g.IsAssignedToGroup(b.Tool, group));
+      if (existing == null) return;
+
+      var gBtn = _s.GetToolGroupButton(existing);
+      var btn = _f.Create(_t, sprites[(int)PlantingState.Pattern], gBtn.ToolButtonsElement);
+      btn.PostLoad();
+
+      _t.RegisterIcon(btn.Root.Q<VisualElement>("ToolImage"));
+
+      btn.Root.Q<Button>().RegisterCallback<ClickEvent>(e => {
+        _t.Cycle();
+
+        // Safety Check: Only switch if the tool actually belongs to the open panel
+        if (_lastRealTool != null && _g.ActiveToolGroup != null && _g.IsAssignedToGroup(_lastRealTool, _g.ActiveToolGroup))
+        {
+          _toolService.SwitchTool(_lastRealTool);
+        }
+        // If there is no previous tool, we just leave our pattern tool equipped!
+      });
+
+      var cancel = _s.ToolButtons.FirstOrDefault(b => (b.Tool is CancelPlantingTool || b.Tool.GetType().Name.Contains("Cancel")) && _g.IsAssignedToGroup(b.Tool, group));
+      if (cancel != null) btn.Root.PlaceBehind(cancel.Root);
+
+      gBtn.AddTool(btn);
+      _g.AssignToGroup(group, _t);
+    }
+  }
+
   [HarmonyPatch]
   public static class Patch_PlantingAreaSelection
   {
-    // We target the private Preview and Action callbacks for BOTH the Planting and Cancel tools
     public static IEnumerable<MethodBase> TargetMethods()
     {
       yield return AccessTools.Method(typeof(PlantingTool), "PreviewCallback");
@@ -25,57 +144,55 @@ namespace Calloatti.NaturalResourcesTweaks
       yield return AccessTools.Method(typeof(CancelPlantingTool), "ActionCallback");
     }
 
-    // By passing inputBlocks by 'ref', we can replace the enumerable with our filtered LINQ query
     public static void Prefix(ref IEnumerable<Vector3Int> inputBlocks)
     {
-      bool shift = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
-      bool ctrl = Keyboard.current != null && Keyboard.current.ctrlKey.isPressed;
-      bool alt = Keyboard.current != null && Keyboard.current.altKey.isPressed;
+      if (PlantingState.Pattern == SelectionPattern.Solid || PlantingState.CameraService == null) return;
 
-      // If no modifiers are pressed, let the game process the blocks normally
-      if (!shift && !ctrl) return;
+      var blocksList = inputBlocks.ToList();
+      if (blocksList.Count == 0) return;
 
-      // Replace the incoming blocks with our filtered pattern
-      inputBlocks = inputBlocks.Where(coords =>
+      Vector3Int anchor = blocksList.First();
+      int rotIndex = Mathf.RoundToInt(((PlantingState.CameraService.HorizontalAngle % 360 + 360) % 360) / 90f) % 4;
+
+      inputBlocks = blocksList.Where(c =>
       {
-        if (shift && ctrl) return Math.Abs(coords.x + coords.y) % 2 == 0; // Checkered pattern
-        if (shift) return Math.Abs(coords.x) % 2 == 0;                   // Vertical lines (along X axis)
-        if (ctrl) return Math.Abs(coords.y) % 2 == 0;                    // Horizontal lines (along Y axis)
+        int localX = Math.Abs(c.x - anchor.x);
+        int localY = Math.Abs(c.y - anchor.y);
 
-        return true;
+        return PlantingState.Pattern switch
+        {
+          SelectionPattern.Checkered => (localX + localY) % 2 == 0,
+          SelectionPattern.Vertical => (rotIndex % 2 == 0) ? localX % 2 == 0 : localY % 2 == 0,
+          SelectionPattern.Horizontal => (rotIndex % 2 == 0) ? localY % 2 == 0 : localX % 2 == 0,
+          _ => true
+        };
       });
     }
   }
 
-  // 1. The UI Patch (Letting you paint)
   [HarmonyPatch(typeof(PlantingAreaValidator), nameof(PlantingAreaValidator.CanPlant))]
   public static class Patch_PlantingAreaValidator_CanPlant
   {
     public static void Postfix(Vector3Int coordinates, string name, ref bool __result, IBlockService ____blockService)
     {
-      // If the game says we can't plant here, check if it's because of a Demolishable object
       if (!__result)
       {
         Demolishable demolishable = ____blockService.GetBottomObjectComponentAt<Demolishable>(coordinates);
         if (demolishable != null)
         {
-          // Turn the brush green and allow painting right over it
           __result = true;
         }
       }
     }
   }
 
-  // 2. The Backend Trick (Making the beavers do the work)
   [HarmonyPatch(typeof(PlantingService), "CreatePlantingSpot")]
   public static class Patch_PlantingService_CreatePlantingSpot
   {
     public static void Postfix(Vector3Int coordinates, string resourceToPlant, ref PlantingSpot __result, SpawnValidationService ____spawnValidationService, IBlockService ____blockService)
     {
-      // If the tile is obstructed, we hijack the PlantingBlocker logic
       if (!____spawnValidationService.IsUnobstructed(coordinates, resourceToPlant))
       {
-        // Check if it's the exact same crop/tree already planted there
         PlantableSpec plantableSpec = ____blockService.GetBottomObjectComponentAt<PlantableSpec>(coordinates);
         if (plantableSpec != null && plantableSpec.TemplateName == resourceToPlant) return;
 
@@ -85,7 +202,6 @@ namespace Calloatti.NaturalResourcesTweaks
           BlockObject blockObject = demolishable.GetComponent<BlockObject>();
           if (blockObject != null)
           {
-            // Set the tree/crop as the PlantingBlocker so PlanterWorkplaceBehavior force-demolishes it
             __result = new PlantingSpot(coordinates, resourceToPlant, blockObject);
           }
         }
@@ -93,21 +209,16 @@ namespace Calloatti.NaturalResourcesTweaks
     }
   }
 
-  // 3. Just mark the existing crop/tree for demolition when painting
   [HarmonyPatch(typeof(PlantingService), nameof(PlantingService.SetPlantingCoordinates))]
   public static class Patch_PlantingService_SetPlantingCoordinates
   {
-    // Added 'string resource' to intercept the name of the plant being placed
     public static void Postfix(Vector3Int coordinates, string resource, IBlockService ____blockService)
     {
-      // Read the cached boolean from our IModStarter
-      if (!NaturalResourcesTweaksStarter.MarkForDemolition) return;
+      if (!ModStarter.MarkForDemolition) return;
 
-      // If Alt is held, do not mark for demolition
       bool alt = Keyboard.current != null && Keyboard.current.altKey.isPressed;
       if (alt) return;
 
-      // If it's the exact same crop/tree already planted there, do nothing
       PlantableSpec plantableSpec = ____blockService.GetBottomObjectComponentAt<PlantableSpec>(coordinates);
       if (plantableSpec != null && plantableSpec.TemplateName == resource) return;
 

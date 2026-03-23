@@ -1,0 +1,9 @@
+2.3.0
+Added buttons to cycle selection patterns
+2.2.0
+Add config file, add check for same plantable
+Cutting areas now only select one z level per column
+2.1.0
+Changed modifier keys, optional skip demolition
+2.0.0
+New features. Area selection modifiers, plant forests, in place crop switching

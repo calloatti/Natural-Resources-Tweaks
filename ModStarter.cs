@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Calloatti.NaturalResourcesTweaks
 {
-  public class NaturalResourcesTweaksStarter : IModStarter
+  public class ModStarter : IModStarter
   {
     private const string HarmonyId = "calloatti.naturalresourcestweaks";
 
@@ -22,7 +22,7 @@ namespace Calloatti.NaturalResourcesTweaks
 
       // 2. Apply Harmony patches globally at game startup
       Harmony harmony = new Harmony(HarmonyId);
-      harmony.PatchAll(typeof(NaturalResourcesTweaksStarter).Assembly);
+      harmony.PatchAll(typeof(ModStarter).Assembly);
       Debug.Log($"[{HarmonyId}] All Harmony patches applied successfully!");
     }
   }
