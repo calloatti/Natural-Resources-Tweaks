@@ -1,3 +1,10 @@
+2.3.3
+Fix multilevel cutting selection
+2.3.2
+Added single/multi level toggle
+2.3.1
+Showing range actually works
+Clicking on planting pattern keeps current tool
 2.3.0
 Added buttons to cycle selection patterns
 2.2.0

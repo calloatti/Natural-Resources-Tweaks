@@ -26,6 +26,7 @@ namespace Calloatti.NaturalResourcesTweaks
   {
     public static SelectionPattern Pattern = SelectionPattern.Solid;
     public static SelectionScope Scope = SelectionScope.Manual;
+    public static SelectionLevel Level = SelectionLevel.Single;
     public static CameraService CameraService;
   }
 
@@ -36,6 +37,7 @@ namespace Calloatti.NaturalResourcesTweaks
     {
       Bind<WoodcuttingPatternTool>().AsSingleton();
       Bind<WoodcuttingScopeTool>().AsSingleton();
+      Bind<WoodcuttingLevelTool>().AsSingleton();
       Bind<WoodcuttingButtonAdder>().AsSingleton();
     }
   }
@@ -80,6 +82,26 @@ namespace Calloatti.NaturalResourcesTweaks
     public override ToolDescription DescribeTool() => new ToolDescription.Builder("Selection Scope").AddSection("Toggle Manual vs. Whole Map.").Build();
   }
 
+  public class WoodcuttingLevelTool : SharedToggleToolBase
+  {
+    public WoodcuttingLevelTool(SelectionToolProcessorFactory f) : base(f) { }
+
+    public override void Cycle()
+    {
+      WoodcuttingState.Level = (SelectionLevel)(((int)WoodcuttingState.Level + 1) % 2);
+      UpdateIcons();
+    }
+
+    protected override void UpdateIcons()
+    {
+      if (Sprites == null) return;
+      var bg = new StyleBackground(Sprites[(int)WoodcuttingState.Level]);
+      foreach (var icon in Icons) if (icon != null) icon.style.backgroundImage = bg;
+    }
+
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Selection Level").AddSection("Toggle Single vs. Multi-Level selection.").Build();
+  }
+
   public class WoodcuttingButtonAdder : IPostLoadableSingleton, IDisposable
   {
     private readonly ToolButtonFactory _f;
@@ -87,13 +109,14 @@ namespace Calloatti.NaturalResourcesTweaks
     private readonly ToolButtonService _s;
     private readonly WoodcuttingPatternTool _tp;
     private readonly WoodcuttingScopeTool _ts;
+    private readonly WoodcuttingLevelTool _tl;
     private readonly ToolService _toolService;
 
     private ITool _lastRealTool;
 
-    public WoodcuttingButtonAdder(ToolButtonFactory f, ToolGroupService g, ToolButtonService s, WoodcuttingPatternTool tp, WoodcuttingScopeTool ts, CameraService cam, ToolService toolService, EventBus eventBus)
+    public WoodcuttingButtonAdder(ToolButtonFactory f, ToolGroupService g, ToolButtonService s, WoodcuttingPatternTool tp, WoodcuttingScopeTool ts, WoodcuttingLevelTool tl, CameraService cam, ToolService toolService, EventBus eventBus)
     {
-      _f = f; _g = g; _s = s; _tp = tp; _ts = ts;
+      _f = f; _g = g; _s = s; _tp = tp; _ts = ts; _tl = tl;
       WoodcuttingState.CameraService = cam;
       _toolService = toolService;
       eventBus.Register(this);
@@ -107,7 +130,7 @@ namespace Calloatti.NaturalResourcesTweaks
     [OnEvent]
     public void OnToolEntered(ToolEnteredEvent e)
     {
-      if (e.Tool != _tp && e.Tool != _ts)
+      if (e.Tool != _tp && e.Tool != _ts && e.Tool != _tl)
       {
         _lastRealTool = e.Tool;
       }
@@ -123,6 +146,7 @@ namespace Calloatti.NaturalResourcesTweaks
 
       Add(_tp, i => SharedSpriteGenerator.GenPattern((SelectionPattern)i), typeof(SelectionPattern), gBtn, group, (int)WoodcuttingState.Pattern);
       Add(_ts, i => SharedSpriteGenerator.GenScope((SelectionScope)i), typeof(SelectionScope), gBtn, group, (int)WoodcuttingState.Scope);
+      Add(_tl, i => SharedSpriteGenerator.GenLevel((SelectionLevel)i), typeof(SelectionLevel), gBtn, group, (int)WoodcuttingState.Level);
     }
 
     private void Add(SharedToggleToolBase tool, Func<int, Sprite> gen, Type enumType, ToolGroupButton gBtn, ToolGroupSpec group, int currentState)
@@ -138,12 +162,10 @@ namespace Calloatti.NaturalResourcesTweaks
       btn.Root.Q<Button>().RegisterCallback<ClickEvent>(e => {
         tool.Cycle();
 
-        // Safety Check: Only switch if the tool actually belongs to the open panel
         if (_lastRealTool != null && _g.ActiveToolGroup != null && _g.IsAssignedToGroup(_lastRealTool, _g.ActiveToolGroup))
         {
           _toolService.SwitchTool(_lastRealTool);
         }
-        // Left the fake tool equipped if there isn't a valid fallback
       });
 
       gBtn.AddTool(btn);
@@ -153,35 +175,52 @@ namespace Calloatti.NaturalResourcesTweaks
 
   public static class TreeCuttingAreaHelper
   {
-    public static IEnumerable<Vector3Int> ProcessBlocks(IEnumerable<Vector3Int> inputBlocks, TerrainAreaService terrainAreaService, IBlockService blockService)
+    // Pass TreeCuttingArea so we can optimize the "Whole Map Unselect" operation
+    public static IEnumerable<Vector3Int> ProcessBlocks(IEnumerable<Vector3Int> inputBlocks, TerrainAreaService terrainAreaService, IBlockService blockService, TreeCuttingArea treeCuttingArea, bool isUnselecting)
     {
+      var blocksList = inputBlocks.ToList();
+      if (blocksList.Count == 0) return blocksList;
+
       ITerrainService terrainService = (ITerrainService)AccessTools.Field(typeof(TerrainAreaService), "_terrainService").GetValue(terrainAreaService);
-      bool alt = WoodcuttingState.Scope == SelectionScope.WholeMap;
 
-      Vector3Int firstBlock = inputBlocks.FirstOrDefault();
-      int initialZ = firstBlock != default ? firstBlock.z : 0;
+      Vector3Int anchor = blocksList.First();
+      int initialZ = anchor.z;
 
-      if (alt)
+      if (WoodcuttingState.Scope == SelectionScope.WholeMap)
       {
+        // Massively optimized Whole Map Unselection
+        if (isUnselecting && treeCuttingArea != null)
+        {
+          return treeCuttingArea.CuttingArea.ToList();
+        }
+
+        // Standard Whole Map Selection
         Vector3Int mapSize = blockService.Size;
         List<Vector3Int> allMapCoords = new List<Vector3Int>(mapSize.x * mapSize.y);
         for (int x = 0; x < mapSize.x; x++)
         {
           for (int y = 0; y < mapSize.y; y++)
           {
-            allMapCoords.Add(SnapToSurface(new Vector3Int(x, y, initialZ), terrainService, blockService));
+            if (WoodcuttingState.Level == SelectionLevel.Multi)
+            {
+              allMapCoords.Add(SnapToSurface(new Vector3Int(x, y, initialZ), terrainService));
+            }
+            else
+            {
+              allMapCoords.Add(new Vector3Int(x, y, initialZ));
+            }
           }
         }
         return allMapCoords;
       }
 
-      IEnumerable<Vector3Int> filteredBlocks = inputBlocks;
-      if (WoodcuttingState.Pattern != SelectionPattern.Solid && inputBlocks.Any())
+      IEnumerable<Vector3Int> workingBlocks = blocksList;
+
+      if (WoodcuttingState.Pattern != SelectionPattern.Solid)
       {
-        Vector3Int anchor = inputBlocks.First();
         int rotIndex = Mathf.RoundToInt(((WoodcuttingState.CameraService.HorizontalAngle % 360 + 360) % 360) / 90f) % 4;
 
-        filteredBlocks = inputBlocks.Where(coords =>
+        workingBlocks = workingBlocks.Where(coords =>
         {
           int localX = Math.Abs(coords.x - anchor.x);
           int localY = Math.Abs(coords.y - anchor.y);
@@ -196,34 +235,18 @@ namespace Calloatti.NaturalResourcesTweaks
         });
       }
 
-      return filteredBlocks.Select(b => SnapToSurface(b, terrainService, blockService));
+      if (WoodcuttingState.Level == SelectionLevel.Multi)
+      {
+        workingBlocks = workingBlocks.Select(b => SnapToSurface(b, terrainService));
+      }
+
+      return workingBlocks.ToList();
     }
 
-    private static Vector3Int SnapToSurface(Vector3Int startPos, ITerrainService terrainService, IBlockService blockService)
+    private static Vector3Int SnapToSurface(Vector3Int startPos, ITerrainService terrainService)
     {
-      int x = startPos.x;
-      int y = startPos.y;
-      int initialZ = startPos.z;
-
-      if (terrainService.Underground(startPos))
-      {
-        for (int z = initialZ; z <= terrainService.Size.z; z++)
-        {
-          Vector3Int pos = new Vector3Int(x, y, z);
-          if (!terrainService.Underground(pos)) return pos;
-        }
-        return new Vector3Int(x, y, terrainService.Size.z);
-      }
-      else
-      {
-        for (int z = initialZ; z >= 0; z--)
-        {
-          Vector3Int pos = new Vector3Int(x, y, z);
-          if (terrainService.Underground(pos)) return new Vector3Int(x, y, z + 1);
-          if (blockService.GetBottomObjectAt(pos) != null) return pos;
-        }
-        return new Vector3Int(x, y, 0);
-      }
+      int targetZ = terrainService.GetTerrainHeight(startPos);
+      return new Vector3Int(startPos.x, startPos.y, targetZ);
     }
   }
 
@@ -232,10 +255,13 @@ namespace Calloatti.NaturalResourcesTweaks
   {
     [HarmonyPrefix]
     [HarmonyPatch("PreviewCallback")]
-    public static bool PreviewCallback_Prefix(IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService, MeasurableAreaDrawer ____measurableAreaDrawer, Color ____toolActionTileColor)
+    public static bool PreviewCallback_Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService, MeasurableAreaDrawer ____measurableAreaDrawer, Color ____toolActionTileColor)
     {
-      var smartCoords = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService);
-      foreach (Vector3Int item in smartCoords)
+      inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, false);
+
+      if (WoodcuttingState.Level == SelectionLevel.Single) return true;
+
+      foreach (Vector3Int item in inputBlocks)
       {
         if (!____treeCuttingArea.IsInCuttingArea(item))
         {
@@ -251,11 +277,14 @@ namespace Calloatti.NaturalResourcesTweaks
 
     [HarmonyPrefix]
     [HarmonyPatch("ActionCallback")]
-    public static bool ActionCallback_Prefix(IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService)
+    public static bool ActionCallback_Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService)
     {
+      inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, false);
+
+      if (WoodcuttingState.Level == SelectionLevel.Single) return true;
+
       ____areaHighlightingService.UnhighlightAll();
-      var smartCoords = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService);
-      ____treeCuttingArea.AddCoordinates(smartCoords);
+      ____treeCuttingArea.AddCoordinates(inputBlocks);
       return false;
     }
   }
@@ -265,10 +294,16 @@ namespace Calloatti.NaturalResourcesTweaks
   {
     [HarmonyPrefix]
     [HarmonyPatch("PreviewCallback")]
-    public static bool PreviewCallback_Prefix(IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService, MeasurableAreaDrawer ____measurableAreaDrawer, MeshDrawer ____actionMeshDrawer, MeshDrawer ____noActionMeshDrawer)
+    public static bool PreviewCallback_Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService, MeasurableAreaDrawer ____measurableAreaDrawer, MeshDrawer ____actionMeshDrawer, MeshDrawer ____noActionMeshDrawer)
     {
-      var smartCoords = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService);
-      foreach (Vector3Int item in smartCoords)
+      // Pass isUnselecting = true
+      inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, true);
+
+      // If we are doing Whole Map Unselect, the list is already 100% accurate across all Z-levels, 
+      // but vanilla drawer still freaks out if the Z levels vary. So we force the manual draw bypass.
+      if (WoodcuttingState.Level == SelectionLevel.Single && WoodcuttingState.Scope != SelectionScope.WholeMap) return true;
+
+      foreach (Vector3Int item in inputBlocks)
       {
         ____measurableAreaDrawer.AddMeasurableCoordinates(item);
         if (____treeCuttingArea.IsInCuttingArea(item))
@@ -288,11 +323,15 @@ namespace Calloatti.NaturalResourcesTweaks
 
     [HarmonyPrefix]
     [HarmonyPatch("ActionCallback")]
-    public static bool ActionCallback_Prefix(IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService)
+    public static bool ActionCallback_Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService)
     {
+      // Pass isUnselecting = true
+      inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, true);
+
+      if (WoodcuttingState.Level == SelectionLevel.Single && WoodcuttingState.Scope != SelectionScope.WholeMap) return true;
+
       ____areaHighlightingService.UnhighlightAll();
-      var smartCoords = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService);
-      ____treeCuttingArea.RemoveCoordinates(smartCoords);
+      ____treeCuttingArea.RemoveCoordinates(inputBlocks);
       return false;
     }
   }

@@ -13,6 +13,7 @@ namespace Calloatti.NaturalResourcesTweaks
   // ==========================================
   public enum SelectionPattern { Solid, Checkered, Vertical, Horizontal }
   public enum SelectionScope { Manual, WholeMap }
+  public enum SelectionLevel { Single, Multi }
 
   // ==========================================
   // 2. SHARED GENERIC TOOL BASE
@@ -61,6 +62,7 @@ namespace Calloatti.NaturalResourcesTweaks
 
     private static readonly Dictionary<SelectionPattern, Sprite> PatternCache = new Dictionary<SelectionPattern, Sprite>();
     private static readonly Dictionary<SelectionScope, Sprite> ScopeCache = new Dictionary<SelectionScope, Sprite>();
+    private static readonly Dictionary<SelectionLevel, Sprite> LevelCache = new Dictionary<SelectionLevel, Sprite>();
 
     public static Sprite GenPattern(SelectionPattern p)
     {
@@ -113,6 +115,29 @@ namespace Calloatti.NaturalResourcesTweaks
       return newSprite;
     }
 
+    public static Sprite GenLevel(SelectionLevel l)
+    {
+      if (LevelCache.TryGetValue(l, out Sprite cachedSprite)) return cachedSprite;
+
+      Sprite newSprite = Draw(tex => {
+        if (l == SelectionLevel.Single)
+        {
+          Fill(tex, 20, 60, 88, 8, Gold);
+        }
+        else
+        {
+          Fill(tex, 20, 40, 30, 8, Gold);
+          Fill(tex, 42, 40, 8, 48, Gold);
+          Fill(tex, 42, 80, 44, 8, Gold);
+          Fill(tex, 78, 40, 8, 48, Gold);
+          Fill(tex, 78, 40, 30, 8, Gold);
+        }
+      });
+
+      LevelCache[l] = newSprite;
+      return newSprite;
+    }
+
     // Explicitly destroy the unmanaged textures to free RAM/VRAM on map unload
     public static void ClearCache()
     {
@@ -135,6 +160,16 @@ namespace Calloatti.NaturalResourcesTweaks
         }
       }
       ScopeCache.Clear();
+
+      foreach (var sprite in LevelCache.Values)
+      {
+        if (sprite != null)
+        {
+          if (sprite.texture != null) UnityEngine.Object.Destroy(sprite.texture);
+          UnityEngine.Object.Destroy(sprite);
+        }
+      }
+      LevelCache.Clear();
     }
 
     private static Sprite Draw(Action<Texture2D> a)
