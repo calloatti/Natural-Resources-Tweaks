@@ -215,6 +215,7 @@ namespace Calloatti.NaturalResourcesTweaks
 
     public void Dispose()
     {
+      if (_eventBus != null) _eventBus.Unregister(this);
       Instance = null;
     }
   }

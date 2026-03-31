@@ -67,6 +67,7 @@ namespace Calloatti.NaturalResourcesTweaks
     private readonly ToolButtonService _s;
     private readonly PlantingPatternTool _t;
     private readonly ToolService _toolService;
+    private readonly EventBus _eventBus;
 
     private ITool _lastRealTool;
 
@@ -75,13 +76,15 @@ namespace Calloatti.NaturalResourcesTweaks
       _f = f; _g = g; _s = s; _t = t;
       PlantingState.CameraService = cam;
       _toolService = toolService;
-      eventBus.Register(this);
+      _eventBus = eventBus;
+      _eventBus.Register(this);
     }
 
     public void Dispose()
     {
       PlantingState.CameraService = null;
       SharedSpriteGenerator.ClearCache();
+      if (_eventBus != null) _eventBus.Unregister(this);
     }
 
     [OnEvent]

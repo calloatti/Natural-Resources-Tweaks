@@ -111,6 +111,7 @@ namespace Calloatti.NaturalResourcesTweaks
     private readonly WoodcuttingScopeTool _ts;
     private readonly WoodcuttingLevelTool _tl;
     private readonly ToolService _toolService;
+    private readonly EventBus _eventBus;
 
     private ITool _lastRealTool;
 
@@ -119,12 +120,14 @@ namespace Calloatti.NaturalResourcesTweaks
       _f = f; _g = g; _s = s; _tp = tp; _ts = ts; _tl = tl;
       WoodcuttingState.CameraService = cam;
       _toolService = toolService;
-      eventBus.Register(this);
+      _eventBus = eventBus;
+      _eventBus.Register(this);
     }
 
     public void Dispose()
     {
       WoodcuttingState.CameraService = null;
+      if (_eventBus != null) _eventBus.Unregister(this);
     }
 
     [OnEvent]
