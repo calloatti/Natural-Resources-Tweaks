@@ -8,6 +8,9 @@ namespace Calloatti.NaturalResourcesTweaks
 {
   public class ModStarter : IModStarter
   {
+    // Declare the globally accessible static instance
+    public static SimpleConfig Config { get; private set; }
+
     private const string HarmonyId = "calloatti.naturalresourcestweaks";
 
     // We store the config value here so the patches can read it instantly
@@ -15,12 +18,10 @@ namespace Calloatti.NaturalResourcesTweaks
 
     public void StartMod(IModEnvironment modEnvironment)
     {
-      // 1. Load the config, get/set the default, and save the file immediately
-      SimpleIniConfig config = new SimpleIniConfig("NaturalResourcesTweaks.txt");
-      MarkForDemolition = config.GetBool("MarkForDemolition", true);
-      config.Save();
+      // Instantiate the config. This instantly runs the TXT synchronization.
+      Config = new SimpleConfig(modEnvironment.ModPath);
 
-      // 2. Apply Harmony patches globally at game startup
+      // Apply Harmony patches globally at game startup
       Harmony harmony = new Harmony(HarmonyId);
       harmony.PatchAll(typeof(ModStarter).Assembly);
       Debug.Log($"[{HarmonyId}] All Harmony patches applied successfully!");

@@ -25,7 +25,6 @@ namespace Calloatti.NaturalResourcesTweaks
     private readonly ILoc _loc;
 
     private PlantableSpec[] _availableTreesArray;
-    private SimpleIniConfig _config;
     private string _forestMethod;
 
     public MixedForestTool(
@@ -45,16 +44,11 @@ namespace Calloatti.NaturalResourcesTweaks
 
     public void Enter()
     {
-      if (_config == null)
-      {
-        _config = new SimpleIniConfig("NaturalResourcesTweaks.txt");
-        _forestMethod = _config.GetString("ForestMethod", "SimpleForest");
-
+           
+        _forestMethod = ModStarter.Config.GetString("ForestMethod");          
+      
         // Load parameters for each method
-        LoadSimpleForestConfig(_config);
-
-        _config.Save();
-      }
+        LoadSimpleForestConfig();
 
       if (_availableTreesArray == null)
       {

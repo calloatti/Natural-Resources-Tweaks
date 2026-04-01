@@ -1,0 +1,43 @@
+ConfigFileName = "NaturalResourcesTweaks.txt"
+
+Key = "MarkForDemolition"
+Type = "bool"
+DefaultValue = true
+Label = "Marks for demolition"
+Tooltip = "Set to True to mark for demolition current natural resource"
+ControlType = "Toggle" # "Toggle", "Slider", "TextField", "Dropdown".
+MinValue = 0
+MaxValue = 0
+Step = 0
+Options = []
+AvailableIn = ["MainMenu", "Game"]
+RequiresRestart = false
+RequiresReload = false
+
+Key = "ForestMethod"
+Type = "string"
+DefaultValue" = "SimpleForest"
+Label = "Forest algorithm",
+Tooltip = "Indicates the algorithm to use to create forests"
+ControlType = "TextField"
+MinValue = 0
+MaxValue = 0
+Step = 0
+Options = []
+AvailableIn = ["MainMenu","Game"] # "MainMenu", "Game", "MapEditor"
+RequiresRestart = false,
+RequiresReload = false
+
+Key = "SimpleForest_UsedTilesPercentage"
+Type = "float"
+DefaultValue = 0.50
+Label = "Percentage of tiles"
+Tooltip = "Percentage of tiles occupied by trees"
+ControlType = "TextField" # "Toggle", "Slider", "TextField", "Dropdown".
+MinValue = 0
+MaxValue = 0
+Step = 0
+Options = []
+AvailableIn = ["MainMenu", "Game"]
+RequiresRestart = false
+RequiresReload = false

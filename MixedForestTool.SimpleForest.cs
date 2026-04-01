@@ -10,9 +10,9 @@ namespace Calloatti.NaturalResourcesTweaks
   {
     private float _simpleForestUsedTilesPercentage;
 
-    private void LoadSimpleForestConfig(SimpleIniConfig config)
+    private void LoadSimpleForestConfig()
     {
-      _simpleForestUsedTilesPercentage = config.GetFloat("SimpleForest_UsedTilesPercentage", 0.50f);
+      _simpleForestUsedTilesPercentage = ModStarter.Config.GetFloat("SimpleForest_UsedTilesPercentage");
     }
 
     private void SimpleForest(IEnumerable<Vector3Int> inputBlocks, Ray ray, bool isAction)

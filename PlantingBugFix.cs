@@ -61,6 +61,10 @@ namespace Calloatti.NaturalResourcesTweaks
   {
     public static bool Prefix(Vector3Int coordinates, string resource, ref bool __result)
     {
+      // If the resource is null, the beaver is doing something else (like clearing the spot).
+      // We must return true to allow the vanilla logic to handle the null properly.
+      if (string.IsNullOrEmpty(resource)) return true;
+
       if (PlantingBugFixState.SpawnValidationService != null && PlantingBugFixState.BlockService != null)
       {
         if (!PlantingBugFixState.SpawnValidationService.IsUnobstructed(coordinates, resource))
@@ -84,7 +88,8 @@ namespace Calloatti.NaturalResourcesTweaks
   {
     public static bool Prefix(PlantExecutor __instance, ref ExecutorStatus __result, Worker ____worker, string ____naturalResource, Vector3Int ____coordinates, float ____finishTimestamp, IDayNightCycle ____dayNightCycle)
     {
-      if (!____worker.Workplace || ____naturalResource == null) return true;
+      // If the worker or resource is null, let vanilla safely handle the failure
+      if (!____worker.Workplace || string.IsNullOrEmpty(____naturalResource)) return true;
 
       // If the timer is up and the beaver is about to call SpawnResource()
       if (____dayNightCycle.PartialDayNumber > ____finishTimestamp)

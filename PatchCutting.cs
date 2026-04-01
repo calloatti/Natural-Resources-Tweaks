@@ -19,6 +19,8 @@ using Timberborn.ToolSystemUI;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Timberborn.SelectionToolSystem;
+using Timberborn.NaturalResourcesLifecycle;
+using Timberborn.Planting;
 
 namespace Calloatti.NaturalResourcesTweaks
 {
@@ -27,6 +29,7 @@ namespace Calloatti.NaturalResourcesTweaks
     public static SelectionPattern Pattern = SelectionPattern.Solid;
     public static SelectionScope Scope = SelectionScope.Manual;
     public static SelectionLevel Level = SelectionLevel.Single;
+    public static SelectionTreeType TreeType = SelectionTreeType.All;
     public static CameraService CameraService;
   }
 
@@ -38,6 +41,7 @@ namespace Calloatti.NaturalResourcesTweaks
       Bind<WoodcuttingPatternTool>().AsSingleton();
       Bind<WoodcuttingScopeTool>().AsSingleton();
       Bind<WoodcuttingLevelTool>().AsSingleton();
+      Bind<WoodcuttingTreeTypeTool>().AsSingleton();
       Bind<WoodcuttingButtonAdder>().AsSingleton();
     }
   }
@@ -102,6 +106,26 @@ namespace Calloatti.NaturalResourcesTweaks
     public override ToolDescription DescribeTool() => new ToolDescription.Builder("Selection Level").AddSection("Toggle Single vs. Multi-Level selection.").Build();
   }
 
+  public class WoodcuttingTreeTypeTool : SharedToggleToolBase
+  {
+    public WoodcuttingTreeTypeTool(SelectionToolProcessorFactory f) : base(f) { }
+
+    public override void Cycle()
+    {
+      WoodcuttingState.TreeType = (SelectionTreeType)(((int)WoodcuttingState.TreeType + 1) % 2);
+      UpdateIcons();
+    }
+
+    protected override void UpdateIcons()
+    {
+      if (Sprites == null) return;
+      var bg = new StyleBackground(Sprites[(int)WoodcuttingState.TreeType]);
+      foreach (var icon in Icons) if (icon != null) icon.style.backgroundImage = bg;
+    }
+
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Tree Type").AddSection("Toggle All Trees vs. Only Dead Trees.").Build();
+  }
+
   public class WoodcuttingButtonAdder : IPostLoadableSingleton, IDisposable
   {
     private readonly ToolButtonFactory _f;
@@ -110,14 +134,15 @@ namespace Calloatti.NaturalResourcesTweaks
     private readonly WoodcuttingPatternTool _tp;
     private readonly WoodcuttingScopeTool _ts;
     private readonly WoodcuttingLevelTool _tl;
+    private readonly WoodcuttingTreeTypeTool _tt;
     private readonly ToolService _toolService;
     private readonly EventBus _eventBus;
 
     private ITool _lastRealTool;
 
-    public WoodcuttingButtonAdder(ToolButtonFactory f, ToolGroupService g, ToolButtonService s, WoodcuttingPatternTool tp, WoodcuttingScopeTool ts, WoodcuttingLevelTool tl, CameraService cam, ToolService toolService, EventBus eventBus)
+    public WoodcuttingButtonAdder(ToolButtonFactory f, ToolGroupService g, ToolButtonService s, WoodcuttingPatternTool tp, WoodcuttingScopeTool ts, WoodcuttingLevelTool tl, WoodcuttingTreeTypeTool tt, CameraService cam, ToolService toolService, EventBus eventBus)
     {
-      _f = f; _g = g; _s = s; _tp = tp; _ts = ts; _tl = tl;
+      _f = f; _g = g; _s = s; _tp = tp; _ts = ts; _tl = tl; _tt = tt;
       WoodcuttingState.CameraService = cam;
       _toolService = toolService;
       _eventBus = eventBus;
@@ -133,7 +158,7 @@ namespace Calloatti.NaturalResourcesTweaks
     [OnEvent]
     public void OnToolEntered(ToolEnteredEvent e)
     {
-      if (e.Tool != _tp && e.Tool != _ts && e.Tool != _tl)
+      if (e.Tool != _tp && e.Tool != _ts && e.Tool != _tl && e.Tool != _tt)
       {
         _lastRealTool = e.Tool;
       }
@@ -150,6 +175,7 @@ namespace Calloatti.NaturalResourcesTweaks
       Add(_tp, i => SharedSpriteGenerator.GenPattern((SelectionPattern)i), typeof(SelectionPattern), gBtn, group, (int)WoodcuttingState.Pattern);
       Add(_ts, i => SharedSpriteGenerator.GenScope((SelectionScope)i), typeof(SelectionScope), gBtn, group, (int)WoodcuttingState.Scope);
       Add(_tl, i => SharedSpriteGenerator.GenLevel((SelectionLevel)i), typeof(SelectionLevel), gBtn, group, (int)WoodcuttingState.Level);
+      Add(_tt, i => SharedSpriteGenerator.GenTreeType((SelectionTreeType)i), typeof(SelectionTreeType), gBtn, group, (int)WoodcuttingState.TreeType);
     }
 
     private void Add(SharedToggleToolBase tool, Func<int, Sprite> gen, Type enumType, ToolGroupButton gBtn, ToolGroupSpec group, int currentState)
@@ -284,6 +310,33 @@ namespace Calloatti.NaturalResourcesTweaks
     {
       inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, false);
 
+      if (WoodcuttingState.TreeType == SelectionTreeType.OnlyDead)
+      {
+        inputBlocks = inputBlocks.Where(pos => {
+          Vector3Int posAbove = new Vector3Int(pos.x, pos.y, pos.z + 1);
+          BlockObject objAtZPlus1 = ____blockService.GetBottomObjectComponentAt<BlockObject>(posAbove);
+
+          LivingNaturalResource resource = null;
+
+          if (objAtZPlus1 != null)
+          {
+            resource = objAtZPlus1.GetComponent<LivingNaturalResource>();
+          }
+
+          // Fallback to exact Z if nothing was found at Z+1
+          if (resource == null)
+          {
+            BlockObject objAtZ = ____blockService.GetBottomObjectComponentAt<BlockObject>(pos);
+            if (objAtZ != null)
+            {
+              resource = objAtZ.GetComponent<LivingNaturalResource>();
+            }
+          }
+
+          return resource != null && resource.IsDead;
+        }).ToList();
+      }
+
       if (WoodcuttingState.Level == SelectionLevel.Single) return true;
 
       ____areaHighlightingService.UnhighlightAll();
@@ -302,8 +355,6 @@ namespace Calloatti.NaturalResourcesTweaks
       // Pass isUnselecting = true
       inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, true);
 
-      // If we are doing Whole Map Unselect, the list is already 100% accurate across all Z-levels, 
-      // but vanilla drawer still freaks out if the Z levels vary. So we force the manual draw bypass.
       if (WoodcuttingState.Level == SelectionLevel.Single && WoodcuttingState.Scope != SelectionScope.WholeMap) return true;
 
       foreach (Vector3Int item in inputBlocks)
