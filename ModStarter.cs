@@ -13,9 +13,6 @@ namespace Calloatti.NaturalResourcesTweaks
 
     private const string HarmonyId = "calloatti.naturalresourcestweaks";
 
-    // We store the config value here so the patches can read it instantly
-    public static bool MarkForDemolition { get; private set; } = true;
-
     public void StartMod(IModEnvironment modEnvironment)
     {
       // Instantiate the config. This instantly runs the TXT synchronization.

@@ -1,3 +1,5 @@
+2.3.7
+Fixed MarkForDemolition setting not working
 2.3.6
 Added mark dead trees tool option, disable replanting tool option
 2.3.5

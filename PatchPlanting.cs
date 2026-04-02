@@ -254,7 +254,8 @@ namespace Calloatti.NaturalResourcesTweaks
     public static void Postfix(Vector3Int coordinates, string resource, IBlockService ____blockService)
     {
       if (PlantingState.ReplantMode == SelectionReplantMode.Vanilla) return;
-      if (!ModStarter.MarkForDemolition) return;
+      
+      if (!ModStarter.Config.GetBool("MarkForDemolition")) return;
 
       bool alt = Keyboard.current != null && Keyboard.current.altKey.isPressed;
       if (alt) return;
