@@ -1,3 +1,5 @@
+2.3.8
+Localization updates.
 2.3.7
 Fixed MarkForDemolition setting not working
 2.3.6

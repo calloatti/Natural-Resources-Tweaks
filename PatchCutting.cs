@@ -16,6 +16,7 @@ using Timberborn.TerrainSystem;
 using Timberborn.ToolButtonSystem;
 using Timberborn.ToolSystem;
 using Timberborn.ToolSystemUI;
+using Timberborn.Localization;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Timberborn.SelectionToolSystem;
@@ -48,7 +49,11 @@ namespace Calloatti.NaturalResourcesTweaks
 
   public class WoodcuttingPatternTool : SharedToggleToolBase
   {
-    public WoodcuttingPatternTool(SelectionToolProcessorFactory f) : base(f) { }
+    private readonly ILoc _loc;
+    public WoodcuttingPatternTool(SelectionToolProcessorFactory f, ILoc loc) : base(f)
+    {
+      _loc = loc;
+    }
 
     public override void Cycle()
     {
@@ -63,12 +68,16 @@ namespace Calloatti.NaturalResourcesTweaks
       foreach (var icon in Icons) if (icon != null) icon.style.backgroundImage = bg;
     }
 
-    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Cutting Pattern").AddSection("Cycle selection patterns.").Build();
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder(_loc.T("Calloatti.NaturalResourcesTweaks.WoodcuttingPatternTool.Title")).AddSection(_loc.T("Calloatti.NaturalResourcesTweaks.WoodcuttingPatternTool.Description")).Build();
   }
 
   public class WoodcuttingScopeTool : SharedToggleToolBase
   {
-    public WoodcuttingScopeTool(SelectionToolProcessorFactory f) : base(f) { }
+    private readonly ILoc _loc;
+    public WoodcuttingScopeTool(SelectionToolProcessorFactory f, ILoc loc) : base(f)
+    {
+      _loc = loc;
+    }
 
     public override void Cycle()
     {
@@ -83,12 +92,16 @@ namespace Calloatti.NaturalResourcesTweaks
       foreach (var icon in Icons) if (icon != null) icon.style.backgroundImage = bg;
     }
 
-    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Selection Scope").AddSection("Toggle Manual vs. Whole Map.").Build();
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder(_loc.T("Calloatti.NaturalResourcesTweaks.WoodcuttingScopeTool.Title")).AddSection(_loc.T("Calloatti.NaturalResourcesTweaks.WoodcuttingScopeTool.Description")).Build();
   }
 
   public class WoodcuttingLevelTool : SharedToggleToolBase
   {
-    public WoodcuttingLevelTool(SelectionToolProcessorFactory f) : base(f) { }
+    private readonly ILoc _loc;
+    public WoodcuttingLevelTool(SelectionToolProcessorFactory f, ILoc loc) : base(f)
+    {
+      _loc = loc;
+    }
 
     public override void Cycle()
     {
@@ -103,12 +116,16 @@ namespace Calloatti.NaturalResourcesTweaks
       foreach (var icon in Icons) if (icon != null) icon.style.backgroundImage = bg;
     }
 
-    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Selection Level").AddSection("Toggle Single vs. Multi-Level selection.").Build();
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder(_loc.T("Calloatti.NaturalResourcesTweaks.WoodcuttingLevelTool.Title")).AddSection(_loc.T("Calloatti.NaturalResourcesTweaks.WoodcuttingLevelTool.Description")).Build();
   }
 
   public class WoodcuttingTreeTypeTool : SharedToggleToolBase
   {
-    public WoodcuttingTreeTypeTool(SelectionToolProcessorFactory f) : base(f) { }
+    private readonly ILoc _loc;
+    public WoodcuttingTreeTypeTool(SelectionToolProcessorFactory f, ILoc loc) : base(f)
+    {
+      _loc = loc;
+    }
 
     public override void Cycle()
     {
@@ -123,7 +140,7 @@ namespace Calloatti.NaturalResourcesTweaks
       foreach (var icon in Icons) if (icon != null) icon.style.backgroundImage = bg;
     }
 
-    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Tree Type").AddSection("Toggle All Trees vs. Only Dead Trees.").Build();
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder(_loc.T("Calloatti.NaturalResourcesTweaks.WoodcuttingTreeTypeTool.Title")).AddSection(_loc.T("Calloatti.NaturalResourcesTweaks.WoodcuttingTreeTypeTool.Description")).Build();
   }
 
   public class WoodcuttingButtonAdder : IPostLoadableSingleton, IDisposable

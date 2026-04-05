@@ -15,6 +15,7 @@ using Timberborn.SingletonSystem;
 using Timberborn.ToolButtonSystem;
 using Timberborn.ToolSystem;
 using Timberborn.ToolSystemUI;
+using Timberborn.Localization;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -41,7 +42,11 @@ namespace Calloatti.NaturalResourcesTweaks
 
   public class PlantingPatternTool : SharedToggleToolBase
   {
-    public PlantingPatternTool(SelectionToolProcessorFactory f) : base(f) { }
+    private readonly ILoc _loc;
+    public PlantingPatternTool(SelectionToolProcessorFactory f, ILoc loc) : base(f)
+    {
+      _loc = loc;
+    }
 
     public override void Cycle()
     {
@@ -59,12 +64,16 @@ namespace Calloatti.NaturalResourcesTweaks
       }
     }
 
-    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Planting Pattern").AddSection("Click to cycle to the next pattern.").Build();
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder(_loc.T("Calloatti.NaturalResourcesTweaks.PlantingPatternTool.Title")).AddSection(_loc.T("Calloatti.NaturalResourcesTweaks.PlantingPatternTool.Description")).Build();
   }
 
   public class PlantingReplantTool : SharedToggleToolBase
   {
-    public PlantingReplantTool(SelectionToolProcessorFactory f) : base(f) { }
+    private readonly ILoc _loc;
+    public PlantingReplantTool(SelectionToolProcessorFactory f, ILoc loc) : base(f)
+    {
+      _loc = loc;
+    }
 
     public override void Cycle()
     {
@@ -82,7 +91,7 @@ namespace Calloatti.NaturalResourcesTweaks
       }
     }
 
-    public override ToolDescription DescribeTool() => new ToolDescription.Builder("Replant Mode").AddSection("Toggle Replant over existing objects vs Vanilla blocking behavior.").Build();
+    public override ToolDescription DescribeTool() => new ToolDescription.Builder(_loc.T("Calloatti.NaturalResourcesTweaks.PlantingReplantTool.Title")).AddSection(_loc.T("Calloatti.NaturalResourcesTweaks.PlantingReplantTool.Description")).Build();
   }
 
   public class PlantingButtonAdder : IPostLoadableSingleton, IDisposable
@@ -254,7 +263,7 @@ namespace Calloatti.NaturalResourcesTweaks
     public static void Postfix(Vector3Int coordinates, string resource, IBlockService ____blockService)
     {
       if (PlantingState.ReplantMode == SelectionReplantMode.Vanilla) return;
-      
+
       if (!ModStarter.Config.GetBool("MarkForDemolition")) return;
 
       bool alt = Keyboard.current != null && Keyboard.current.altKey.isPressed;
