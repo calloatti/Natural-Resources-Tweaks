@@ -1,3 +1,17 @@
-Natural Resources Tweaks
+﻿Natural Resources Tweaks
+
+https://github.com/calloatti/Natural-Resources-Tweaks
 
 https://steamcommunity.com/sharedfiles/filedetails/?id=3676861595
+
+Mods on GitHub
+
+https://github.com/search?q=owner%3Acalloatti+sort%3Aname-asc+%22Timberborn+Mod%22&type=repositories
+
+Mods on Steam Workshop
+
+https://steamcommunity.com/sharedfiles/filedetails/?id=3682179025
+
+Mods zip files
+
+https://github.com/calloatti/ModZips
