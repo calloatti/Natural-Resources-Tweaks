@@ -1,50 +1,38 @@
---------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.8
+Game Version: 1.0.0.0 - Mod Version: 2.3.8
 - Localization updates.
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.7
+Game Version: 1.0.0.0 - Mod Version: 2.3.7
 - Fixed MarkForDemolition setting not working
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.6
+Game Version: 1.0.0.0 - Mod Version: 2.3.6
 - Added mark dead trees tool option, disable replanting tool option
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.5
+Game Version: 1.0.0.0 - Mod Version: 2.3.5
 - Fix edge case crash when planting before demolish done
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.4
+Game Version: 1.0.0.0 - Mod Version: 2.3.4
 - Allows placing beehives over crops
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.3
+Game Version: 1.0.0.0 - Mod Version: 2.3.3
 - Fix multilevel cutting selection
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.2
+Game Version: 1.0.0.0 - Mod Version: 2.3.2
 - Added single/multi level toggle
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.1
+Game Version: 1.0.0.0 - Mod Version: 2.3.1
 - Showing range actually works
 - Clicking on planting pattern keeps current tool
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.3.0
+Game Version: 1.0.0.0 - Mod Version: 2.3.0
 - Added buttons to cycle selection patterns
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.2.0
+Game Version: 1.0.0.0 - Mod Version: 2.2.0
 - Add config file, add check for same plantable
 - Cutting areas now only select one z level per column
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.1.0
+Game Version: 1.0.0.0 - Mod Version: 2.1.0
 - Changed modifier keys, optional skip demolition
 --------------------------------------------------------------------------------
-Game Version: 1.0.0.0
-Mod Version: 2.0.0
+Game Version: 1.0.0.0 - Mod Version: 2.0.0
 - New features. Area selection modifiers, plant forests, in place crop switching
+--------------------------------------------------------------------------------
