@@ -1,0 +1,1 @@
+Replaces the oversized mature ghost models of trees, crops and bushes with the seedling variants during the planting preview.
