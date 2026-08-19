@@ -11,7 +11,7 @@ namespace Calloatti.NaturalResourcesTweaks
     // Declare the globally accessible static instance
     public static SimpleConfig Config { get; private set; }
 
-    private const string HarmonyId = "calloatti.naturalresourcestweaks";
+    private const string HarmonyId = "Calloatti.NaturalResourcesTweaks";
 
     public void StartMod(IModEnvironment modEnvironment)
     {
@@ -19,8 +19,7 @@ namespace Calloatti.NaturalResourcesTweaks
       Config = new SimpleConfig(modEnvironment.ModPath);
 
       // Apply Harmony patches globally at game startup
-      Harmony harmony = new Harmony(HarmonyId);
-      harmony.PatchAll(typeof(ModStarter).Assembly);
+new Harmony(HarmonyId).PatchAll();
       Debug.Log($"[{HarmonyId}] All Harmony patches applied successfully!");
     }
   }

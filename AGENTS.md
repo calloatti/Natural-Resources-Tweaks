@@ -27,3 +27,8 @@ Replaces oversized mature ghost models of trees/crops/bushes with seedling varia
 | `BeehivePatch.cs` | Beehive behavior patches |
 | `PlantingBugFix.cs` | Bug fixes for planting logic |
 | `SharedUI.cs` | Shared UI utilities |
+
+## Hard Rule
+DO NOT EVER TOUCH THE DEPLOY FOLDER.
+
+BUILD DOES EVERYTHING, NEVER EVER MESS WITH THE DEPLOY PROCESS.
