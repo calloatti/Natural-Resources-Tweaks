@@ -162,7 +162,7 @@ namespace Calloatti.NaturalResourcesTweaks
   }
 
   // EXECUTION PHASE: The player clicked "Build". The game is spawning the real building.
-  [HarmonyPatch(typeof(BlockObject), "AddToService")]
+  [HarmonyPatch(typeof(BlockObject), nameof(BlockObject.AddToService))]
   static class BlockObject_AddToService_Patch
   {
     static void Prefix(BlockObject __instance)

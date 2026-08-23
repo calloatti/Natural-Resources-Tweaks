@@ -1,4 +1,5 @@
-﻿using Bindito.Core;
+﻿using System;
+using Bindito.Core;
 using HarmonyLib;
 using Timberborn.BehaviorSystem;
 using Timberborn.BlockSystem;
@@ -32,7 +33,7 @@ namespace Calloatti.NaturalResourcesTweaks
     }
   }
 
-  public class PlantingBugFixLoader : IPostLoadableSingleton
+  public class PlantingBugFixLoader : IPostLoadableSingleton, IDisposable
   {
     private readonly SpawnValidationService _spawnValidationService;
     private readonly IBlockService _blockService;
@@ -48,6 +49,12 @@ namespace Calloatti.NaturalResourcesTweaks
       // Cache the services so our Harmony patches can access them safely during the Tick phase
       PlantingBugFixState.SpawnValidationService = _spawnValidationService;
       PlantingBugFixState.BlockService = _blockService;
+    }
+
+    public void Dispose()
+    {
+      PlantingBugFixState.SpawnValidationService = null;
+      PlantingBugFixState.BlockService = null;
     }
   }
 
@@ -103,7 +110,7 @@ namespace Calloatti.NaturalResourcesTweaks
             {
               // The spot is obstructed (e.g., the Builder hasn't removed the Demolishable object yet). 
               // Force a safe failure instead of crashing the BlockObject array. The beaver will safely release the job.
-              AccessTools.Method(typeof(PlantExecutor), "FinishPlanting").Invoke(__instance, null);
+              __instance.FinishPlanting();
               __result = ExecutorStatus.Failure;
               return false; // Skip original Tick logic
             }

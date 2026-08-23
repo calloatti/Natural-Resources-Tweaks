@@ -2,7 +2,6 @@
 using HarmonyLib;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using Timberborn.Buildings;
 using Timberborn.BuildingsNavigation;
 using Timberborn.BuildingsReachability;
@@ -70,7 +69,7 @@ namespace Calloatti.NaturalResourcesTweaks
     public static UnifiedPlantingRangeDrawer Instance { get; private set; }
     public bool IsActive { get; private set; }
 
-    // Inyectamos los nuevos servicios para el test de grupos
+    // Inject the new services for tool group testing
     public UnifiedPlantingRangeDrawer(
       BoundsNavRangeDrawer boundsDrawer,
       AreaHighlightingService areaHighlightingService,
@@ -91,7 +90,7 @@ namespace Calloatti.NaturalResourcesTweaks
       _eventBus.Register(this);
     }
 
-    // Buscamos dinámicamente un árbol y un cultivo para testear las capacidades de los edificios
+    // Dynamically find one tree and one crop to test building capabilities
     private void EnsureTemplatesLoaded()
     {
       if (_treeTemplate == null || _cropTemplate == null)
@@ -106,7 +105,7 @@ namespace Calloatti.NaturalResourcesTweaks
       }
     }
 
-    // Usamos el EventBus nativo en lugar de Harmony para detectar cuando se equipa una herramienta
+    // Use the native EventBus instead of Harmony to detect when a tool is equipped
     [OnEvent]
     public void OnToolEntered(ToolEnteredEvent e)
     {
@@ -136,10 +135,10 @@ namespace Calloatti.NaturalResourcesTweaks
         if (planter == null) continue;
 
         bool canAdd = false;
-        // Si el tool está en Fields, nos quedamos solo con las granjas (plantan crops)
+        // If the tool is in Fields, keep only farms (they plant crops)
         if (isFields && _cropTemplate != null && planter.CanPlant(_cropTemplate)) canAdd = true;
 
-        // Si el tool está en Forestry, nos quedamos solo con los foresters (plantan trees)
+        // If the tool is in Forestry, keep only foresters (they plant trees)
         if (isForestry && _treeTemplate != null && planter.CanPlant(_treeTemplate)) canAdd = true;
 
         if (canAdd)
@@ -237,18 +236,9 @@ namespace Calloatti.NaturalResourcesTweaks
     }
   }
 
-  // Ahora interceptamos tanto el PlantingTool como el CancelPlantingTool para que el cursor no se pinte de teal
-  [HarmonyPatch]
-  public static class Patch_PlantingTool_Callbacks
+  // We now intercept both PlantingTool and CancelPlantingTool so the cursor does not paint teal
+  internal static class PlantingRangeHighlightPostfix
   {
-    public static IEnumerable<MethodBase> TargetMethods()
-    {
-      yield return AccessTools.Method(typeof(PlantingTool), "PreviewCallback");
-      yield return AccessTools.Method(typeof(PlantingTool), "ActionCallback");
-      yield return AccessTools.Method(typeof(CancelPlantingTool), "PreviewCallback");
-      yield return AccessTools.Method(typeof(CancelPlantingTool), "ActionCallback");
-    }
-
     public static void Postfix(IEnumerable<Vector3Int> inputBlocks)
     {
       if (UnifiedPlantingRangeDrawer.Instance != null && UnifiedPlantingRangeDrawer.Instance.IsActive)
@@ -256,5 +246,29 @@ namespace Calloatti.NaturalResourcesTweaks
         UnifiedPlantingRangeDrawer.Instance.DrawInteriorHighlights(inputBlocks);
       }
     }
+  }
+
+  [HarmonyPatch(typeof(PlantingTool), nameof(PlantingTool.PreviewCallback))]
+  public static class Patch_Range_PlantingTool_PreviewCallback
+  {
+    public static void Postfix(IEnumerable<Vector3Int> inputBlocks) => PlantingRangeHighlightPostfix.Postfix(inputBlocks);
+  }
+
+  [HarmonyPatch(typeof(PlantingTool), nameof(PlantingTool.ActionCallback))]
+  public static class Patch_Range_PlantingTool_ActionCallback
+  {
+    public static void Postfix(IEnumerable<Vector3Int> inputBlocks) => PlantingRangeHighlightPostfix.Postfix(inputBlocks);
+  }
+
+  [HarmonyPatch(typeof(CancelPlantingTool), nameof(CancelPlantingTool.PreviewCallback))]
+  public static class Patch_Range_CancelPlantingTool_PreviewCallback
+  {
+    public static void Postfix(IEnumerable<Vector3Int> inputBlocks) => PlantingRangeHighlightPostfix.Postfix(inputBlocks);
+  }
+
+  [HarmonyPatch(typeof(CancelPlantingTool), nameof(CancelPlantingTool.ActionCallback))]
+  public static class Patch_Range_CancelPlantingTool_ActionCallback
+  {
+    public static void Postfix(IEnumerable<Vector3Int> inputBlocks) => PlantingRangeHighlightPostfix.Postfix(inputBlocks);
   }
 }

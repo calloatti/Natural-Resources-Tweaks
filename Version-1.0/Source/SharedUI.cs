@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using Bindito.Core;
 using Timberborn.SelectionToolSystem;
+using Timberborn.SingletonSystem;
 using Timberborn.ToolSystem;
 using Timberborn.ToolSystemUI;
 using UnityEngine;
@@ -16,6 +18,28 @@ namespace Calloatti.NaturalResourcesTweaks
   public enum SelectionLevel { Single, Multi }
   public enum SelectionTreeType { All, OnlyDead }
   public enum SelectionReplantMode { Replant, Vanilla }
+
+  // ==========================================
+  // 2. SHARED SPRITE CACHE LIFETIME OWNER
+  // ==========================================
+  [Context("Game")]
+  internal class SharedSpriteCacheConfigurator : Configurator
+  {
+    protected override void Configure()
+    {
+      Bind<SharedSpriteCacheManager>().AsSingleton();
+    }
+  }
+
+  internal class SharedSpriteCacheManager : ILoadableSingleton, IDisposable
+  {
+    public void Load() { }
+
+    public void Dispose()
+    {
+      SharedSpriteGenerator.ClearCache();
+    }
+  }
 
   // ==========================================
   // 2. SHARED GENERIC TOOL BASE

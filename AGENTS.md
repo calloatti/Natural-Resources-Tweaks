@@ -26,7 +26,16 @@ Replaces oversized mature ghost models of trees/crops/bushes with seedling varia
 | `PatchRangeDisplay.cs` | Range display patches |
 | `BeehivePatch.cs` | Beehive behavior patches |
 | `PlantingBugFix.cs` | Bug fixes for planting logic |
-| `SharedUI.cs` | Shared UI utilities |
+| `SharedUI.cs` | Shared UI utilities, sprite cache (`SharedSpriteCacheManager`) |
+
+## Reflection Policy
+NO reflection (`AccessTools`, `System.Reflection`, `.Invoke`) in mod code. Game assemblies are publicized at compile time via Krafs.Publicizer (`CommonModSettings.props` `<Publicize>` list) — access private members directly; reference patch targets with `nameof(...)` in `[HarmonyPatch]` attributes. Use ONE patch class per target method: HarmonyX does not reliably fan out multiple stacked `[HarmonyPatch]` attributes on a class into separate targets — share logic via a static helper class instead. When touching a new game assembly, add it to the Publicize list. Publicizer is compile-time only; runtime stays vanilla.
+
+SimpleConfig files (`Version-1.0/SimpleConfig/`) are exempt — do not refactor them.
+
+## Lifetime Rules
+- Static state holders must be nulled on context unload: loader singletons implement `IDisposable`.
+- Unity objects (textures/sprites in `SharedSpriteGenerator`) are owned by `SharedSpriteCacheManager` and destroyed only there.
 
 ## Hard Rule
 DO NOT EVER TOUCH THE DEPLOY FOLDER.

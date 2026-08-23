@@ -1,3 +1,5 @@
+* Game Version: 1.0.0.0 - Mod Version: 2.3.11
+- Removed reflection use, fixed state leaks
 * Game Version: 1.0.0.0 - Mod Version: 2.3.10
 - SimpleConfig UI integration
 * Game Version: 1.0.0.0 - Mod Version: 2.3.9

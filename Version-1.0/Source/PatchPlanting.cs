@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Bindito.Core;
 using HarmonyLib;
 using Timberborn.BlockSystem;
@@ -118,7 +117,6 @@ namespace Calloatti.NaturalResourcesTweaks
     public void Dispose()
     {
       PlantingState.CameraService = null;
-      SharedSpriteGenerator.ClearCache();
       if (_eventBus != null) _eventBus.Unregister(this);
     }
 
@@ -177,17 +175,8 @@ namespace Calloatti.NaturalResourcesTweaks
     }
   }
 
-  [HarmonyPatch]
-  public static class Patch_PlantingAreaSelection
+  internal static class PlantingPatternFilter
   {
-    public static IEnumerable<MethodBase> TargetMethods()
-    {
-      yield return AccessTools.Method(typeof(PlantingTool), "PreviewCallback");
-      yield return AccessTools.Method(typeof(PlantingTool), "ActionCallback");
-      yield return AccessTools.Method(typeof(CancelPlantingTool), "PreviewCallback");
-      yield return AccessTools.Method(typeof(CancelPlantingTool), "ActionCallback");
-    }
-
     public static void Prefix(ref IEnumerable<Vector3Int> inputBlocks)
     {
       if (PlantingState.Pattern == SelectionPattern.Solid || PlantingState.CameraService == null) return;
@@ -214,6 +203,30 @@ namespace Calloatti.NaturalResourcesTweaks
     }
   }
 
+  [HarmonyPatch(typeof(PlantingTool), nameof(PlantingTool.PreviewCallback))]
+  public static class Patch_PlantingTool_PreviewCallback
+  {
+    public static void Prefix(ref IEnumerable<Vector3Int> inputBlocks) => PlantingPatternFilter.Prefix(ref inputBlocks);
+  }
+
+  [HarmonyPatch(typeof(PlantingTool), nameof(PlantingTool.ActionCallback))]
+  public static class Patch_PlantingTool_ActionCallback
+  {
+    public static void Prefix(ref IEnumerable<Vector3Int> inputBlocks) => PlantingPatternFilter.Prefix(ref inputBlocks);
+  }
+
+  [HarmonyPatch(typeof(CancelPlantingTool), nameof(CancelPlantingTool.PreviewCallback))]
+  public static class Patch_CancelPlantingTool_PreviewCallback
+  {
+    public static void Prefix(ref IEnumerable<Vector3Int> inputBlocks) => PlantingPatternFilter.Prefix(ref inputBlocks);
+  }
+
+  [HarmonyPatch(typeof(CancelPlantingTool), nameof(CancelPlantingTool.ActionCallback))]
+  public static class Patch_CancelPlantingTool_ActionCallback
+  {
+    public static void Prefix(ref IEnumerable<Vector3Int> inputBlocks) => PlantingPatternFilter.Prefix(ref inputBlocks);
+  }
+
   [HarmonyPatch(typeof(PlantingAreaValidator), nameof(PlantingAreaValidator.CanPlant))]
   public static class Patch_PlantingAreaValidator_CanPlant
   {
@@ -232,7 +245,7 @@ namespace Calloatti.NaturalResourcesTweaks
     }
   }
 
-  [HarmonyPatch(typeof(PlantingService), "CreatePlantingSpot")]
+  [HarmonyPatch(typeof(PlantingService), nameof(PlantingService.CreatePlantingSpot))]
   public static class Patch_PlantingService_CreatePlantingSpot
   {
     public static void Postfix(Vector3Int coordinates, string resourceToPlant, ref PlantingSpot __result, SpawnValidationService ____spawnValidationService, IBlockService ____blockService)

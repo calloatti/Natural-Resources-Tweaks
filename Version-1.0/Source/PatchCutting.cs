@@ -227,7 +227,7 @@ namespace Calloatti.NaturalResourcesTweaks
       var blocksList = inputBlocks.ToList();
       if (blocksList.Count == 0) return blocksList;
 
-      ITerrainService terrainService = (ITerrainService)AccessTools.Field(typeof(TerrainAreaService), "_terrainService").GetValue(terrainAreaService);
+      ITerrainService terrainService = terrainAreaService._terrainService;
 
       Vector3Int anchor = blocksList.First();
       int initialZ = anchor.z;
@@ -296,12 +296,10 @@ namespace Calloatti.NaturalResourcesTweaks
     }
   }
 
-  [HarmonyPatch(typeof(TreeCuttingAreaSelectionTool))]
-  public static class Patch_TreeCuttingAreaSelectionTool
+  [HarmonyPatch(typeof(TreeCuttingAreaSelectionTool), nameof(TreeCuttingAreaSelectionTool.PreviewCallback))]
+  public static class Patch_TreeCuttingSelection_PreviewCallback
   {
-    [HarmonyPrefix]
-    [HarmonyPatch("PreviewCallback")]
-    public static bool PreviewCallback_Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService, MeasurableAreaDrawer ____measurableAreaDrawer, Color ____toolActionTileColor)
+    public static bool Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService, MeasurableAreaDrawer ____measurableAreaDrawer, Color ____toolActionTileColor)
     {
       inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, false);
 
@@ -320,10 +318,12 @@ namespace Calloatti.NaturalResourcesTweaks
       ____areaHighlightingService.Highlight();
       return false;
     }
+  }
 
-    [HarmonyPrefix]
-    [HarmonyPatch("ActionCallback")]
-    public static bool ActionCallback_Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService)
+  [HarmonyPatch(typeof(TreeCuttingAreaSelectionTool), nameof(TreeCuttingAreaSelectionTool.ActionCallback))]
+  public static class Patch_TreeCuttingSelection_ActionCallback
+  {
+    public static bool Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService)
     {
       inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, false);
 
@@ -362,12 +362,10 @@ namespace Calloatti.NaturalResourcesTweaks
     }
   }
 
-  [HarmonyPatch(typeof(TreeCuttingAreaUnselectionTool))]
-  public static class Patch_TreeCuttingAreaUnselectionTool
+  [HarmonyPatch(typeof(TreeCuttingAreaUnselectionTool), nameof(TreeCuttingAreaUnselectionTool.PreviewCallback))]
+  public static class Patch_TreeCuttingUnselection_PreviewCallback
   {
-    [HarmonyPrefix]
-    [HarmonyPatch("PreviewCallback")]
-    public static bool PreviewCallback_Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService, MeasurableAreaDrawer ____measurableAreaDrawer, MeshDrawer ____actionMeshDrawer, MeshDrawer ____noActionMeshDrawer)
+    public static bool Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService, MeasurableAreaDrawer ____measurableAreaDrawer, MeshDrawer ____actionMeshDrawer, MeshDrawer ____noActionMeshDrawer)
     {
       // Pass isUnselecting = true
       inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, true);
@@ -391,10 +389,12 @@ namespace Calloatti.NaturalResourcesTweaks
       ____areaHighlightingService.Highlight();
       return false;
     }
+  }
 
-    [HarmonyPrefix]
-    [HarmonyPatch("ActionCallback")]
-    public static bool ActionCallback_Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService)
+  [HarmonyPatch(typeof(TreeCuttingAreaUnselectionTool), nameof(TreeCuttingAreaUnselectionTool.ActionCallback))]
+  public static class Patch_TreeCuttingUnselection_ActionCallback
+  {
+    public static bool Prefix(ref IEnumerable<Vector3Int> inputBlocks, Ray ray, TreeCuttingArea ____treeCuttingArea, TerrainAreaService ____terrainAreaService, AreaHighlightingService ____areaHighlightingService, IBlockService ____blockService)
     {
       // Pass isUnselecting = true
       inputBlocks = TreeCuttingAreaHelper.ProcessBlocks(inputBlocks, ____terrainAreaService, ____blockService, ____treeCuttingArea, true);

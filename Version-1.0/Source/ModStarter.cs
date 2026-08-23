@@ -19,7 +19,7 @@ namespace Calloatti.NaturalResourcesTweaks
       Config = new SimpleConfig(modEnvironment.ModPath);
 
       // Apply Harmony patches globally at game startup
-new Harmony(HarmonyId).PatchAll();
+      new Harmony(HarmonyId).PatchAll();
       Debug.Log($"[{HarmonyId}] All Harmony patches applied successfully!");
     }
   }
