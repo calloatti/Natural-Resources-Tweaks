@@ -1,6 +1,6 @@
 {
-  "ContentFolder": "C:/Users/calloatti/Documents/Timberborn/Mods/Natural Resources Tweaks",
-  "ChangeNoteFile": "C:/Users/calloatti/source/repos/Mods/Natural Resources Tweaks/.meta/steam_changelog.txt",
+  "DepsFile": "C:/Users/calloatti/source/repos/Mods/Natural Resources Tweaks/.meta/steam_deps.txt",
   "ItemId": "3676861595",
-  "DepsFile": "C:/Users/calloatti/source/repos/Mods/Natural Resources Tweaks/.meta/steam_deps.txt"
+  "ContentFolder": "C:/Users/calloatti/Documents/Timberborn/Mods/Natural Resources Tweaks",
+  "ChangeNoteFile": "C:/Users/calloatti/source/repos/Mods/Natural Resources Tweaks/.meta/steam_changelog.txt"
 }

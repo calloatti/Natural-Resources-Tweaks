@@ -1,0 +1,26 @@
+﻿using Calloatti.Config;
+using HarmonyLib;
+using Timberborn.Modding;
+using Timberborn.ModManagerScene;
+using UnityEngine;
+
+namespace Calloatti.NaturalResourcesTweaks
+{
+  public class ModStarter : IModStarter
+  {
+    // Declare the globally accessible static instance
+    public static SimpleConfig Config { get; private set; }
+
+    private const string HarmonyId = "Calloatti.NaturalResourcesTweaks";
+
+    public void StartMod(IModEnvironment modEnvironment)
+    {
+      // Instantiate the config. This instantly runs the TXT synchronization.
+      Config = new SimpleConfig(modEnvironment.ModPath);
+
+      // Apply Harmony patches globally at game startup
+      new Harmony(HarmonyId).PatchAll();
+      Debug.Log($"[{HarmonyId}] All Harmony patches applied successfully!");
+    }
+  }
+}

@@ -2,7 +2,7 @@
   "Name": "Natural Resources Tweaks",
   "Version": "2.3.12",
   "Id": "Calloatti.NaturalResourcesTweaks",
-  "MinimumGameVersion": "1.0.13.1",
+  "MinimumGameVersion": "1.1.2.4",
   "Description": "Replaces the oversized mature ghost models of trees, crops and bushes with the seedling variants during the planting preview.",
   "RequiredMods": [{"Id": "Harmony", "MinVersion": "2.4.1"}],
   "OptionalMods": []
